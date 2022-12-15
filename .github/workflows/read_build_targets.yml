@@ -56,4 +56,4 @@ jobs:
         content="${content//$'\n'/'%0A'}"
         content="${content//$'\r'/'%0D'}"
         # end of handling for multi line json
-        echo "::set-output name=platforms::$content"
+        echo "platforms=$content" >> $GITHUB_OUTPUT
