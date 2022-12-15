@@ -28,6 +28,12 @@ name: Read build targets
 
 on:
   workflow_call:
+    inputs:
+      # The name of the json file containing the targets
+      target_file:
+        default: './build_targets.json'
+        required: false
+        type: string
     outputs:
       platforms:
         description: "'platform' is set to the list of targets"
@@ -40,7 +46,7 @@ jobs:
   read_targets_from_file:
     runs-on: ubuntu-latest
     outputs:
-      platforms: ${{ steps.read-build-target-from-file.outputs.platforms }}
+      platforms: ${{env.platforms}}
 
     steps:
     - name: Checkout Repo
@@ -50,10 +56,6 @@ jobs:
 
     - id: read-build-target-from-file
       run: |
-        content=`cat ./build_targets.json`
-        # the following lines are required for multi line json
-        content="${content//'%'/'%25'}"
-        content="${content//$'\n'/'%0A'}"
-        content="${content//$'\r'/'%0D'}"
-        # end of handling for multi line json
-        echo "platforms=$content" >> $GITHUB_OUTPUT
+        echo 'platforms<<EOF' >> $GITHUB_ENV
+        cat ${{inputs.target_file}} >> $GITHUB_ENV
+        echo 'EOF' >> $GITHUB_ENV
