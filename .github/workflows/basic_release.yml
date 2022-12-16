@@ -53,6 +53,15 @@ jobs:
     - name: Build
       run: docker run --rm -v ${PWD}:/module ${{inputs.builder_image}} ${{inputs.build_script}}
 
+    - name: Extract version
+      id: release_version
+      env:
+        GITHUB_REF : ${{ github.ref }}
+      run: |
+        result="version=${GITHUB_REF/refs\/tags\//}"
+        echo $result
+        echo $result >> $GITHUB_OUTPUT
+
     - name: Name artifacts
       # Create a file pattern for the assets: "myfile-123.bin:the/path/myfile.bin otherfile-123.zip:some/path/otherfile.zip"
       # The first part is the name of the asset in the release, the other is the build artifact
@@ -62,20 +71,21 @@ jobs:
         assets=""
         for filepath in ${{inputs.artifacts}}; do
         filename=$(basename "$filepath")
-        asset="${filename%.*}-${{github.ref}}.${filename##*.}:${filepath}"
+        asset="${filename%.*}-${{steps.release_version.outputs.version}}.${filename##*.}:${filepath}"
         assets="$assets$asset "
         done
-        echo "Compiled assets: ${assets}"
-        echo "assets=${assets}" >> $GITHUB_OUTPUT
+        result="assets=${assets}"
+        echo "$result"
+        echo "$result" >> $GITHUB_OUTPUT
 
     - name: Create release and upload files
       uses: meeDamian/github-release@2.0
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag: ${{ github.ref }}
-        name: ${{ github.ref }}
+        token: ${{secrets.GITHUB_TOKEN}}
+        tag: ${{github.ref}}
+        name: ${{steps.release_version.outputs.version}}
         draft: true
         prerelease: true
         gzip: false
         allow_override: false
-        files: ${{ steps.name_artifacts.outputs.assets }}
+        files: ${{steps.name_artifacts.outputs.assets}}
