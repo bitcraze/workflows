@@ -62,9 +62,10 @@ jobs:
         assets=""
         for filepath in ${{inputs.artifacts}}; do
         filename=$(basename "$filepath")
-        asset="${filename%.*}-${version}.${filename##*.}:${filepath}"
+        asset="${filename%.*}-${{github.ref}}.${filename##*.}:${filepath}"
         assets="$assets$asset "
         done
+        echo "Compiled assets: ${assets}"
         echo "assets=${assets}" >> $GITHUB_OUTPUT
 
     - name: Create release and upload files
@@ -75,4 +76,6 @@ jobs:
         name: ${{ github.ref }}
         draft: true
         prerelease: true
+        gzip: false
+        allow_override: false
         files: ${{ steps.name_artifacts.outputs.assets }}
