@@ -1,0 +1,78 @@
+# ,---------,       ____  _ __
+# |  ,-^-,  |      / __ )(_) /_______________ _____  ___
+# | (  O  ) |     / __  / / __/ ___/ ___/ __ `/_  / / _ \
+# | / ,--´  |    / /_/ / / /_/ /__/ /  / /_/ / / /_/  __/
+#    +------`   /_____/_/\__/\___/_/   \__,_/ /___/\___/
+#
+# Copyright (C) 2022 Bitcraze AB
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, in version 3.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+# This work flow checks out the repo, creates a draft release, builds and uploads the artifacts to the release
+
+name: Basic release
+
+on:
+  workflow_call:
+    inputs:
+      builder_image:
+        description: 'The docker image to use to build the repo, commonly bitcraze/builder or bitcraze/web-builder'
+        required: true
+        type: string
+      build_script:
+        description: 'The build script to use to build the repository'
+        default: './tools/build/build'
+        required: false
+        type: string
+      artifacts:
+        description: 'A list of the artifacts to upload to the release, space-separated. Artifact files names MUST have an extension'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Create a release and upload artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Build
+      run: docker run --rm -v ${PWD}:/module ${{inputs.builder_image}} ${{inputs.build_script}}
+
+    - name: Name artifacts
+      # Create a file pattern for the assets: "myfile-123.bin:the/path/myfile.bin otherfile-123.zip:some/path/otherfile.zip"
+      # The first part is the name of the asset in the release, the other is the build artifact
+      # Note: this code only works if the files have an extension
+      id: name_artifacts
+      run: |
+        assets=""
+        for filepath in ${{inputs.artifacts}}; do
+        filename=$(basename "$filepath")
+        asset="${filename%.*}-${version}.${filename##*.}:${filepath}"
+        assets="$assets$asset "
+        done
+        echo "assets=${assets}" >> $GITHUB_OUTPUT
+
+    - name: Create release and upload files
+      uses: meeDamian/github-release@2.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref }}
+        name: ${{ github.ref }}
+        draft: true
+        prerelease: true
+        files: ${{ steps.name_artifacts.outputs.assets }}
