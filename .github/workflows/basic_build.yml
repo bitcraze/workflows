@@ -40,8 +40,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Checkout, fetch-depth=0 fetches the full repos (required for automatic versioning to work)
     - uses: actions/checkout@v4
       with:
+        fetch-depth: 0
         submodules: true
     - name: Build
       run: docker run --rm -v ${PWD}:/module ${{inputs.builder_image}} ${{inputs.build_script}}
